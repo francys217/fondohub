@@ -179,7 +179,7 @@
 
         <!-- BUDGET COMMITTEES & EXPENSES PLAN -->
         <div class="bg-slate-800/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-sm">
-          <div class="flex items-center justify-between mb-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
               <h2 class="text-xl font-extrabold text-white flex items-center gap-2">
                 <i class="fa-solid fa-chart-pie text-brand-400"></i>
@@ -187,10 +187,15 @@
               </h2>
               <p class="text-xs text-slate-400 mt-1">Desglose de estimaciones aprobadas vs gastos ejecutados.</p>
             </div>
-            <button onclick="openMaterialsModal()" class="px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition">
-              <i class="fa-solid fa-list-check text-brand-400"></i>
-              Detalle Materiales ($50.65)
-            </button>
+            <div class="flex items-center gap-2">
+              <button id="addExpenseBtn" onclick="openExpenseModal()" class="hidden px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white flex items-center gap-1.5 transition shadow-md">
+                <i class="fa-solid fa-plus"></i> Registrar Gasto
+              </button>
+              <button onclick="openMaterialsModal()" class="px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-list-check text-brand-400"></i>
+                Detalle Materiales ($50.65)
+              </button>
+            </div>
           </div>
 
           <div id="categoriesGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -265,6 +270,57 @@
   </main>
 
   <!-- ==================== MODALS ==================== -->
+
+  <!-- REGISTER EXPENSE MODAL (ADMIN ONLY) -->
+  <div id="expenseModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-3xl max-w-md w-full p-6 shadow-2xl relative">
+      <button onclick="closeExpenseModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <div class="text-center space-y-2 mb-6">
+        <div class="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center mx-auto text-2xl">
+          <i class="fa-solid fa-file-invoice-dollar"></i>
+        </div>
+        <h3 class="text-xl font-extrabold text-white">Registrar Gasto de Comité</h3>
+        <p class="text-xs text-slate-400">Ingresa la compra ejecutada en la nube.</p>
+      </div>
+      <form onsubmit="saveExpense(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Comité / Categoría</label>
+          <select id="expenseCategory" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white">
+            <option value="Decoración">Decoración</option>
+            <option value="Comida">Comida</option>
+            <option value="Postres">Postres</option>
+            <option value="Bebidas">Bebidas</option>
+            <option value="Materiales">Materiales</option>
+            <option value="Termos">Termos</option>
+            <option value="Lapiceros / Llaveros">Lapiceros / Llaveros</option>
+            <option value="Camisas (Adicional)">Camisas (Adicional)</option>
+            <option value="Relojes (Adicional)">Relojes (Adicional)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Descripción del Gasto</label>
+          <input type="text" id="expenseDescription" required placeholder="Ej: Compra de cartón y silicón" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Monto ($)</label>
+            <input type="number" step="0.01" id="expenseAmount" required placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Fecha</label>
+            <input type="date" id="expenseDate" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Foto Comprobante (Opcional)</label>
+          <input type="file" id="expenseImage" accept="image/*" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-xs text-slate-400">
+        </div>
+        <button type="submit" class="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-rose-600/30 transition mt-2">
+          Guardar Gasto en la Nube
+        </button>
+      </form>
+    </div>
+  </div>
 
   <!-- AUTHENTICATION / ADMIN LOGIN MODAL -->
   <div id="authModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
@@ -530,6 +586,13 @@
           if (selectedMemberId) openMemberModal(selectedMemberId);
         });
 
+        // Expenses Sync
+        window.onSnapshot(window.collection(window.db, "expenses"), (snapshot) => {
+          expenses = [];
+          snapshot.forEach(doc => expenses.push({ id: doc.id, ...doc.data() }));
+          renderAll();
+        });
+
         // Calendar Sync
         window.onSnapshot(window.collection(window.db, "schedule"), (snapshot) => {
           if (!snapshot.empty) {
@@ -650,7 +713,7 @@
               <span>${pct}%</span>
             </div>
             <div class="mt-1 w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-              <div class="bg-brand-500 h-1.5 rounded-full" style="width: ${pct}%"></div>
+              <div class="bg-rose-500 h-1.5 rounded-full" style="width: ${pct}%"></div>
             </div>
           </div>
         `;
@@ -769,33 +832,114 @@
       document.getElementById('eventModal').classList.add('hidden');
     }
 
+    // EXPENSES MODAL MANAGEMENT
+    function openExpenseModal() {
+      if (!isAdmin) return;
+      document.getElementById('expenseCategory').value = 'Decoración';
+      document.getElementById('expenseDescription').value = '';
+      document.getElementById('expenseAmount').value = '';
+      document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('expenseImage').value = '';
+      document.getElementById('expenseModal').classList.remove('hidden');
+    }
+
+    function closeExpenseModal() {
+      document.getElementById('expenseModal').classList.add('hidden');
+    }
+
+    async function saveExpense(e) {
+      e.preventDefault();
+      if (!isAdmin) return;
+
+      const category = document.getElementById('expenseCategory').value;
+      const description = document.getElementById('expenseDescription').value;
+      const amount = parseFloat(document.getElementById('expenseAmount').value);
+      const date = document.getElementById('expenseDate').value;
+      const fileInput = document.getElementById('expenseImage');
+
+      if (!amount || amount <= 0) {
+        alert("Por favor ingresa un monto válido.");
+        return;
+      }
+
+      const expenseId = Date.now().toString();
+      const newExpense = {
+        category: category,
+        description: description,
+        amount: amount,
+        date: date,
+        proofImg: null
+      };
+
+      if (fileInput.files && fileInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = async function(evt) {
+          newExpense.proofImg = evt.target.result;
+          await window.setDoc(window.doc(window.db, "expenses", expenseId), newExpense);
+          closeExpenseModal();
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+      } else {
+        await window.setDoc(window.doc(window.db, "expenses", expenseId), newExpense);
+        closeExpenseModal();
+      }
+    }
+
     function renderAuditLog() {
       const container = document.getElementById('auditLogList');
       container.innerHTML = '';
 
-      if (payments.length === 0) {
-        container.innerHTML = `<p class="text-slate-500 text-center py-6">No hay aportes registrados en la nube aún.</p>`;
+      if (payments.length === 0 && expenses.length === 0) {
+        container.innerHTML = `<p class="text-slate-500 text-center py-6">No hay registros en la nube aún.</p>`;
         return;
       }
 
-      const sorted = [...payments].reverse();
-      sorted.forEach(p => {
+      const allAudit = [];
+      payments.forEach(p => {
         const m = members.find(mem => mem.id === p.memberId) || { name: 'Estudiante' };
+        allAudit.push({
+          title: m.name,
+          subtitle: `${p.date || 'Reciente'} • Ref: ${p.ref || 'N/A'}`,
+          amount: `+$${parseFloat(p.amount).toFixed(2)}`,
+          colorClass: 'text-emerald-400',
+          bgClass: 'bg-emerald-500/10',
+          iconClass: 'fa-arrow-down',
+          proofImg: p.proofImg,
+          timestamp: p.date || ''
+        });
+      });
+
+      expenses.forEach(e => {
+        allAudit.push({
+          title: `Gasto: ${e.category}`,
+          subtitle: `${e.date || 'Reciente'} • ${e.description || 'Sin detalle'}`,
+          amount: `-$${parseFloat(e.amount).toFixed(2)}`,
+          colorClass: 'text-rose-400',
+          bgClass: 'bg-rose-500/10',
+          iconClass: 'fa-arrow-up',
+          proofImg: e.proofImg,
+          timestamp: e.date || ''
+        });
+      });
+
+      allAudit.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1));
+
+      allAudit.forEach(itemData => {
         const item = document.createElement('div');
         item.className = "bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-2";
         item.innerHTML = `
           <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-xs">
-              <i class="fa-solid fa-arrow-down"></i>
+            <div class="w-8 h-8 rounded-lg ${itemData.bgClass} ${itemData.colorClass} flex items-center justify-center font-bold text-xs">
+              <i class="fa-solid ${itemData.iconClass}"></i>
             </div>
             <div>
-              <p class="font-bold text-slate-200">${m.name}</p>
-              <p class="text-[10px] text-slate-400">${p.date || 'Reciente'} • Ref: ${p.ref || 'N/A'}</p>
+              <p class="font-bold text-slate-200">${itemData.title}</p>
+              <p class="text-[10px] text-slate-400">${itemData.subtitle}</p>
             </div>
           </div>
           <div class="text-right">
-            <span class="font-extrabold text-emerald-400 text-xs">+$${parseFloat(p.amount).toFixed(2)}</span>
-            ${p.proofImg ? `<button onclick="viewImage('${p.proofImg}', 'Comprobante de ${m.name}')" class="block text-[10px] text-brand-400 hover:underline">Ver Foto</button>` : ''}
+            <span class="font-extrabold ${itemData.colorClass} text-xs">${itemData.amount}</span>
+            ${itemData.proofImg ? `<button onclick="viewImage('${itemData.proofImg}', 'Comprobante')" class="block text-[10px] text-brand-400 hover:underline">Ver Foto</button>` : ''}
           </div>
         `;
         container.appendChild(item);
@@ -959,6 +1103,7 @@
       const authLabel = document.getElementById('authLabel');
       const authIcon = document.getElementById('authIcon');
       const addEventBtn = document.getElementById('addEventBtn');
+      const addExpenseBtn = document.getElementById('addExpenseBtn');
 
       if (isAdmin) {
         modeText.innerText = "ADMINISTRADOR ACTIVO";
@@ -966,12 +1111,14 @@
         authLabel.innerText = "Cerrar Modo Admin";
         authIcon.className = "fa-solid fa-unlock text-emerald-400";
         if (addEventBtn) addEventBtn.classList.remove('hidden');
+        if (addExpenseBtn) addExpenseBtn.classList.remove('hidden');
       } else {
         modeText.innerText = "Público / Estudiante";
         modeText.className = "ml-1 text-white font-bold";
         authLabel.innerText = "Acceso Administrador";
         authIcon.className = "fa-solid fa-lock text-brand-400";
         if (addEventBtn) addEventBtn.classList.add('hidden');
+        if (addExpenseBtn) addExpenseBtn.classList.add('hidden');
       }
     }
 
