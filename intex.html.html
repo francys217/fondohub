@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FondoHub - Sistema de Gestión de Fondo de Graduación</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // Firebase Public Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDemoKeyForFondoHubWebStorageApp2026",
+      authDomain: "fondohub-graduacion.firebaseapp.com",
+      projectId: "fondohub-graduacion",
+      storageBucket: "fondohub-graduacion.appspot.com",
+      messagingSenderId: "109283746501",
+      appId: "1:109283746501:web:9a8b7c6d5e4f3a2b1c"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.db = db;
+    window.collection = collection;
+    window.onSnapshot = onSnapshot;
+    window.doc = doc;
+    window.setDoc = setDoc;
+    window.deleteDoc = deleteDoc;
+  </script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#f0fdf4', 100: '#dcfce7', 500: '#22c55e', 600: '#16a34a', 700: '#15803d', 900: '#14532d' },
+            gold: { 400: '#facc15', 500: '#eab308', 600: '#ca8a04' }
+          },
+          fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased selection:bg-brand-500 selection:text-white pb-12">
+
+  <!-- TOP HEADER & NAV -->
+  <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center shadow-lg shadow-brand-500/20">
+          <i class="fa-solid fa-graduation-cap text-white text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">FondoHub</h1>
+          <p class="text-xs text-brand-400 font-medium">Gestión Financiera de Promoción • T4-GCS-1M</p>
+        </div>
+      </div>
+
+      <!-- Admin / User Switcher -->
+      <div class="flex items-center gap-3">
+        <div id="modeBadge" class="hidden md:flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-800 border border-slate-700 text-slate-300">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
+          Modo: <span id="modeText" class="ml-1 text-white font-bold">Público / Estudiante</span>
+        </div>
+        <button id="authBtn" onclick="toggleAuthModal()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-2 shadow-sm">
+          <i id="authIcon" class="fa-solid fa-lock text-brand-400"></i>
+          <span id="authLabel">Acceso Administrador</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-10">
+
+    <!-- KPI SUMMARY CARDS -->
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div class="bg-slate-800/80 border border-slate-700/70 rounded-3xl p-6 relative overflow-hidden group hover:border-brand-500/50 transition-all">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Objetivo Base (Cuotas)</p>
+            <h3 class="text-3xl font-extrabold mt-2 text-white">$495.00</h3>
+            <p class="text-xs text-slate-400 mt-1">11 Alumnos × 9 Meses ($45 c/u)</p>
+          </div>
+          <div class="w-12 h-12 rounded-2xl bg-brand-500/10 text-brand-400 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-bullseye"></i>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-700/50 flex justify-between text-xs text-slate-300">
+          <span>Meta total con extras:</span>
+          <span class="font-bold text-brand-400">$758.00</span>
+        </div>
+      </div>
+
+      <div class="bg-slate-800/80 border border-slate-700/70 rounded-3xl p-6 relative overflow-hidden group hover:border-emerald-500/50 transition-all">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Recaudado</p>
+            <h3 id="statRecaudado" class="text-3xl font-extrabold mt-2 text-emerald-400">$0.00</h3>
+            <p id="statRecaudadoBs" class="text-xs text-slate-400 mt-1">Bs 0.00 (Tasa Binance)</p>
+          </div>
+          <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-wallet"></i>
+          </div>
+        </div>
+        <div class="mt-4 w-full bg-slate-700 rounded-full h-2 overflow-hidden">
+          <div id="statProgressBar" class="bg-emerald-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="bg-slate-800/80 border border-slate-700/70 rounded-3xl p-6 relative overflow-hidden group hover:border-rose-500/50 transition-all">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Gastado / Ejecutado</p>
+            <h3 id="statGastado" class="text-3xl font-extrabold mt-2 text-rose-400">$0.00</h3>
+            <p class="text-xs text-slate-400 mt-1">Compras y compras de comités</p>
+          </div>
+          <div class="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-receipt"></i>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-700/50 flex justify-between text-xs text-slate-300">
+          <span>Facturas respaldadas:</span>
+          <span id="statFacturasCount" class="font-bold text-rose-400">0 comprobantes</span>
+        </div>
+      </div>
+
+      <div class="bg-slate-800/80 border border-slate-700/70 rounded-3xl p-6 relative overflow-hidden group hover:border-sky-500/50 transition-all">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Fondo Disponible</p>
+            <h3 id="statDisponible" class="text-3xl font-extrabold mt-2 text-sky-400">$0.00</h3>
+            <p class="text-xs text-slate-400 mt-1">Caja chica actual</p>
+          </div>
+          <div class="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-400 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-piggy-bank"></i>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-700/50 flex justify-between text-xs text-slate-300">
+          <span>Tasa Binance del día:</span>
+          <span class="font-bold text-sky-400" id="binanceRateHeader">P2P Binance</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- MAIN DASHBOARD CONTENT GRID -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      
+      <!-- LEFT COLUMN: MEMBER DIRECTORY & STATUS (2 Cols) -->
+      <section class="lg:col-span-2 space-y-8">
+        
+        <!-- Member Search & Header -->
+        <div class="bg-slate-800/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-sm">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 class="text-xl font-extrabold text-white flex items-center gap-2">
+                <i class="fa-solid fa-users text-brand-400"></i>
+                Listado de Integrantes (11 Alumnos)
+              </h2>
+              <p class="text-xs text-slate-400 mt-1">Busca por nombre o cédula para consultar historial de pagos y cuotas.</p>
+            </div>
+            <div class="relative min-w-[260px]">
+              <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+              <input type="text" id="memberSearch" oninput="renderMembers()" placeholder="Buscar nombre o cédula..." class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all">
+            </div>
+          </div>
+
+          <!-- Members Grid -->
+          <div id="membersContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- BUDGET COMMITTEES & EXPENSES PLAN -->
+        <div class="bg-slate-800/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-sm">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 class="text-xl font-extrabold text-white flex items-center gap-2">
+                <i class="fa-solid fa-chart-pie text-brand-400"></i>
+                Comités y Presupuestos de Gastos
+              </h2>
+              <p class="text-xs text-slate-400 mt-1">Desglose de estimaciones aprobadas vs gastos ejecutados.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="addExpenseBtn" onclick="openExpenseModal()" class="hidden px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white flex items-center gap-1.5 transition shadow-md">
+                <i class="fa-solid fa-plus"></i> Registrar Gasto
+              </button>
+              <button onclick="openMaterialsModal()" class="px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-list-check text-brand-400"></i>
+                Detalle Materiales ($50.65)
+              </button>
+            </div>
+          </div>
+
+          <div id="categoriesGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+      </section>
+
+      <!-- RIGHT COLUMN: CALENDAR & RECENT TRANSACTIONS (1 Col) -->
+      <section class="space-y-8">
+        
+        <!-- CALENDAR WIDGET -->
+        <div class="bg-slate-800/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-sm">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-calendar-days text-brand-400"></i>
+              Calendario de Pagos
+            </h2>
+            <div class="flex items-center gap-2">
+              <button id="addEventBtn" onclick="openAddEventModal()" class="hidden px-2.5 py-1 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold flex items-center gap-1 transition">
+                <i class="fa-solid fa-plus"></i> Evento
+              </button>
+              <div class="flex items-center gap-1">
+                <button onclick="changeMonth(-1)" class="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 flex items-center justify-center transition">
+                  <i class="fa-solid fa-chevron-left text-xs"></i>
+                </button>
+                <span id="calendarMonthLabel" class="text-xs font-bold text-slate-200 px-2 min-w-[100px] text-center">Octubre 2026</span>
+                <button onclick="changeMonth(1)" class="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 flex items-center justify-center transition">
+                  <i class="fa-solid fa-chevron-right text-xs"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Calendar Grid Header -->
+          <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 uppercase py-2 border-b border-slate-700/50">
+            <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div>
+          </div>
+          <!-- Calendar Days -->
+          <div id="calendarDaysGrid" class="grid grid-cols-7 gap-1 text-center text-xs pt-2 min-h-[220px]">
+            <!-- JS populated -->
+          </div>
+
+          <!-- Upcoming Deadlines in Active Month -->
+          <div class="mt-4 pt-4 border-t border-slate-700/50">
+            <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Vencimientos del Mes</h4>
+            <div id="monthDeadlinesList" class="space-y-2">
+              <!-- JS Populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- RECENT AUDIT ACTIVITY / RECEIPTS -->
+        <div class="bg-slate-800/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-sm">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-receipt text-brand-400"></i>
+              Historial de Comprobantes
+            </h2>
+            <span class="text-[11px] bg-brand-500/10 text-brand-400 px-2.5 py-1 rounded-full font-semibold">Sincronizado</span>
+          </div>
+          
+          <div id="auditLogList" class="space-y-3 max-h-[380px] overflow-y-auto pr-1 text-xs">
+            <!-- JS Populated -->
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- REGISTER EXPENSE MODAL (ADMIN ONLY) -->
+  <div id="expenseModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-3xl max-w-md w-full p-6 shadow-2xl relative">
+      <button onclick="closeExpenseModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <div class="text-center space-y-2 mb-6">
+        <div class="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center mx-auto text-2xl">
+          <i class="fa-solid fa-file-invoice-dollar"></i>
+        </div>
+        <h3 class="text-xl font-extrabold text-white">Registrar Gasto de Comité</h3>
+        <p class="text-xs text-slate-400">Ingresa la compra ejecutada en la nube.</p>
+      </div>
+      <form onsubmit="saveExpense(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Comité / Categoría</label>
+          <select id="expenseCategory" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white">
+            <option value="Decoración">Decoración</option>
+            <option value="Comida">Comida</option>
+            <option value="Postres">Postres</option>
+            <option value="Bebidas">Bebidas</option>
+            <option value="Materiales">Materiales</option>
+            <option value="Termos">Termos</option>
+            <option value="Lapiceros / Llaveros">Lapiceros / Llaveros</option>
+            <option value="Camisas (Adicional)">Camisas (Adicional)</option>
+            <option value="Relojes (Adicional)">Relojes (Adicional)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Descripción del Gasto</label>
+          <input type="text" id="expenseDescription" required placeholder="Ej: Compra de cartón y silicón" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Monto ($)</label>
+            <input type="number" step="0.01" id="expenseAmount" required placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Fecha</label>
+            <input type="date" id="expenseDate" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Foto Comprobante (Opcional)</label>
+          <input type="file" id="expenseImage" accept="image/*" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-xs text-slate-400">
+        </div>
+        <button type="submit" class="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-rose-600/30 transition mt-2">
+          Guardar Gasto en la Nube
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- AUTHENTICATION / ADMIN LOGIN MODAL -->
+  <div id="authModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-3xl max-w-md w-full p-6 shadow-2xl relative">
+      <button onclick="toggleAuthModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <div class="text-center space-y-2 mb-6">
+        <div class="w-14 h-14 rounded-2xl bg-brand-500/10 text-brand-400 flex items-center justify-center mx-auto text-2xl">
+          <i class="fa-solid fa-user-shield"></i>
+        </div>
+        <h3 class="text-xl font-extrabold text-white">Acceso Administrativo</h3>
+        <p class="text-xs text-slate-400">Ingresa la contraseña para registrar pagos, compras e imágenes.</p>
+      </div>
+      <form onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Contraseña de Administrador</label>
+          <input type="password" id="adminPasswordInput" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500">
+        </div>
+        <div id="loginError" class="hidden text-xs text-rose-400 font-semibold bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20">
+          Contraseña incorrecta. Inténtalo de nuevo.
+        </div>
+        <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-brand-600/30 transition">
+          Ingresar como Administrador
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ADD / EDIT EVENT MODAL -->
+  <div id="eventModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-3xl max-w-md w-full p-6 shadow-2xl relative">
+      <button onclick="closeEventModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <h3 id="eventModalTitle" class="text-lg font-extrabold text-white mb-4">Añadir Evento / Fecha de Pago</h3>
+      <form onsubmit="saveCalendarEvent(event)" class="space-y-4">
+        <input type="hidden" id="eventId">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Descripción del Evento / Cuota</label>
+          <input type="text" id="eventTitle" required placeholder="Ej: Cuota Extra o Compra de Materiales" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Fecha</label>
+            <input type="date" id="eventDate" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Monto Estimado ($)</label>
+            <input type="number" step="0.01" id="eventAmount" required value="5.00" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+          </div>
+        </div>
+        <button type="submit" class="w-full py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-bold text-xs transition shadow-md mt-2">
+          Guardar Evento en Calendario
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MEMBER PROFILE & PAYMENT ACTION MODAL -->
+  <div id="memberModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-slate-800 border border-slate-700 rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative my-8">
+      <button onclick="closeMemberModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+
+      <!-- Profile Header -->
+      <div id="memberModalHeader" class="pb-6 border-b border-slate-700">
+        <!-- JS filled -->
+      </div>
+
+      <!-- Content Tabs / Payment History -->
+      <div class="py-6 space-y-6">
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
+            <span>Historial de Aportes</span>
+            <span id="memberPaymentStatsBadge" class="text-brand-400 text-xs"></span>
+          </h4>
+          <div id="memberPaymentsList" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+            <!-- JS List -->
+          </div>
+        </div>
+
+        <!-- WHATSAPP PAYMENT REPORT GENERATOR (USER / ADMIN) -->
+        <div class="bg-slate-900/80 border border-slate-700/80 rounded-2xl p-5 space-y-4">
+          <h4 class="text-sm font-bold text-white flex items-center gap-2">
+            <i class="fa-brands fa-whatsapp text-emerald-400 text-base"></i>
+            Notificar o Reportar Pago al Administrador
+          </h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Tipo de Aporte</label>
+              <select id="waPaymentType" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+                <option value="Cuota Completa ($5.00)">Cuota Completa ($5.00)</option>
+                <option value="Abono Parcial">Abono Parcial (Monto variable)</option>
+                <option value="Camisas ($13.00)">Pago Camisa ($13.00)</option>
+                <option value="Reloj ($10.91)">Pago Reloj ($10.91)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Monto a Reportar ($)</label>
+              <input type="number" step="0.01" id="waAmount" value="5.00" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+            </div>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Número de Referencia / Banco / Nota</label>
+            <input type="text" id="waRef" placeholder="Ej: Ref 849201 - Pago Móvil Banesco" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+          </div>
+          <button onclick="sendWhatsAppReport()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition">
+            <i class="fa-brands fa-whatsapp text-base"></i>
+            Enviar Captura y Datos por WhatsApp
+          </button>
+        </div>
+
+        <!-- ADMIN ONLY: REGISTER PAYMENT DIRECTLY -->
+        <div id="adminAddPaymentSection" class="hidden bg-brand-950/40 border border-brand-500/30 rounded-2xl p-5 space-y-4">
+          <h4 class="text-sm font-bold text-brand-300 flex items-center gap-2">
+            <i class="fa-solid fa-plus-circle text-brand-400"></i>
+            Registrar Pago Verificado (Exclusivo Administrador)
+          </h4>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Monto ($)</label>
+              <input type="number" step="0.01" id="adminPayAmount" value="5.00" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Tasa Binance (Bs)</label>
+              <input type="number" step="0.01" id="adminPayRate" value="45.00" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Concepto</label>
+              <select id="adminPayConcept" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+                <option value="Cuota Mensual">Cuota Mensual</option>
+                <option value="Abono Parcial">Abono Parcial / Extra</option>
+                <option value="Camisas">Pago Camisas</option>
+                <option value="Relojes">Pago Relojes</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Nº Referencia / Nota</label>
+              <input type="text" id="adminPayRef" placeholder="Ej: 994821 Banesco" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Comprobante de Pago (Foto)</label>
+              <input type="file" id="adminPayImage" accept="image/*" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-xs text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:bg-slate-800 file:text-slate-200">
+            </div>
+          </div>
+          <button onclick="saveAdminPayment()" class="w-full py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-bold text-xs transition shadow-md">
+            Guardar Pago en el Sistema
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MATERIALS BREAKDOWN MODAL -->
+  <div id="materialsModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative">
+      <button onclick="closeMaterialsModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <h3 class="text-lg font-extrabold text-white mb-2 flex items-center gap-2">
+        <i class="fa-solid fa-boxes-packing text-brand-400"></i>
+        Detalle del Presupuesto de Materiales ($50.65)
+      </h3>
+      <p class="text-xs text-slate-400 mb-4">Lista detallada de compras estimadas de materiales de decoración e insumos.</p>
+      
+      <div class="max-h-72 overflow-y-auto pr-1 space-y-2">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-900 text-slate-400 font-bold uppercase text-[10px]">
+            <tr>
+              <th class="p-2">Material</th>
+              <th class="p-2 text-center">Cant.</th>
+              <th class="p-2 text-right">Precio ($)</th>
+              <th class="p-2 text-right">Total ($)</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-700/50">
+            <tr><td class="p-2 font-medium">Cartón en kilo</td><td class="p-2 text-center">5</td><td class="p-2 text-right">$3.00</td><td class="p-2 text-right font-bold text-white">$15.00</td></tr>
+            <tr><td class="p-2 font-medium">Silicón frío</td><td class="p-2 text-center">2</td><td class="p-2 text-right">$4.00</td><td class="p-2 text-right font-bold text-white">$8.00</td></tr>
+            <tr><td class="p-2 font-medium">Silicón en barra</td><td class="p-2 text-center">5</td><td class="p-2 text-right">$0.30</td><td class="p-2 text-right font-bold text-white">$1.50</td></tr>
+            <tr><td class="p-2 font-medium">Cartulina escolar negra</td><td class="p-2 text-center">12</td><td class="p-2 text-right">$0.45</td><td class="p-2 text-right font-bold text-white">$5.40</td></tr>
+            <tr><td class="p-2 font-medium">Cinta raso dorada</td><td class="p-2 text-center">11</td><td class="p-2 text-right">$0.25</td><td class="p-2 text-right font-bold text-white">$2.75</td></tr>
+            <tr><td class="p-2 font-medium">Vinil adhesivo</td><td class="p-2 text-center">2</td><td class="p-2 text-right">$5.00</td><td class="p-2 text-right font-bold text-white">$10.00</td></tr>
+            <tr><td class="p-2 font-medium">Anime</td><td class="p-2 text-center">1</td><td class="p-2 text-right">$5.00</td><td class="p-2 text-right font-bold text-white">$5.00</td></tr>
+            <tr><td class="p-2 font-medium">Cinta adhesiva de papel</td><td class="p-2 text-center">1</td><td class="p-2 text-right">$3.00</td><td class="p-2 text-right font-bold text-white">$3.00</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-4 pt-3 border-t border-slate-700 flex justify-between items-center text-xs font-bold text-white">
+        <span>Suma Total Materiales:</span>
+        <span class="text-brand-400 text-sm">$50.65</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIGHTBOX IMAGE PREVIEW MODAL -->
+  <div id="imageModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4" onclick="closeImageModal()">
+    <div class="relative max-w-3xl max-h-[90vh] overflow-hidden rounded-2xl border border-slate-700 bg-slate-900" onclick="event.stopPropagation()">
+      <button onclick="closeImageModal()" class="absolute top-3 right-3 bg-slate-900/80 text-white w-8 h-8 rounded-full flex items-center justify-center z-10"><i class="fa-solid fa-xmark"></i></button>
+      <img id="modalImg" src="" class="max-w-full max-h-[80vh] object-contain mx-auto">
+      <p id="modalImgCaption" class="p-3 text-center text-xs text-slate-300 bg-slate-900 border-t border-slate-800"></p>
+    </div>
+  </div>
+
+  <!-- APPLICATION DATA & REALTIME FIREBASE LOGIC -->
+  <script>
+    const DEFAULT_MEMBERS = [
+      { id: '30784119', name: 'Francysmar Martínez', email: 'francystabata2005@gmail.com', shirtName: 'T.S.U Francysmar M.T', shirtSize: 'L' },
+      { id: '26569297', name: 'Margelys Marin', email: 'Margelysmmm@gmail.com', shirtName: 'T.S.U Margelys Marin R', shirtSize: 'S' },
+      { id: '30806388', name: 'Daimar Toledo', email: 'daimartoledo16@gmail.com', shirtName: 'T.S.U Toledo Daimar', shirtSize: 'S' },
+      { id: '26249155', name: 'Lourdemar González', email: 'lourdemarg526@gmail.com', shirtName: 'T.S.U González Lourdemar', shirtSize: 'M' },
+      { id: '26692232', name: 'Juan Suarez', email: 'aominesuarez@gmail.com', shirtName: 'T.S.U Juan Suarez', shirtSize: 'M' },
+      { id: '27902016', name: 'Kelvin Suárez', email: 'suarezkelvin0103@gmail.com', shirtName: 'T.S.U Kelvin Suárez', shirtSize: 'S' },
+      { id: '30478386', name: 'Oscariani Basanta', email: 'oscariani1903@gmail.com', shirtName: 'T.S.U Basanta Oscariani', shirtSize: 'S' },
+      { id: '31298848', name: 'Pastora Yépez', email: 'girlpasto@gmail.com', shirtName: 'T.S.U Pastora Yépez', shirtSize: 'S' },
+      { id: '30061560', name: 'Edgar Mercado', email: 'noeledgargt82@gmail.com', shirtName: 'T.S.U Mercado Edgar', shirtSize: 'M' },
+      { id: '30806464', name: 'Gizbell Rivas', email: 'rivasgizbell123@gmail.com', shirtName: 'T.S.U Rivas Gizbell', shirtSize: 'S' },
+      { id: '24892277', name: 'Juan Cabrera', email: 'juanramsescabrera25@gmail.com', shirtName: 'T.S.U Cabrera Juan', shirtSize: 'L' }
+    ];
+
+    const BUDGET_COMMITTEES = [
+      { id: 'deco', name: 'Decoración', amount: 150.00, icon: 'fa-wand-magic-sparkles' },
+      { id: 'comida', name: 'Comida', amount: 30.00, icon: 'fa-utensils' },
+      { id: 'postre', name: 'Postres', amount: 40.00, icon: 'fa-cake-candles' },
+      { id: 'bebida', name: 'Bebidas', amount: 10.00, icon: 'fa-glass-water' },
+      { id: 'materiales', name: 'Materiales', amount: 50.65, icon: 'fa-scissors' },
+      { id: 'termos', name: 'Termos', amount: 154.00, icon: 'fa-bottle-water' },
+      { id: 'lapicero', name: 'Lapiceros / Llaveros', amount: 60.00, icon: 'fa-pen-nib' },
+      { id: 'camisas', name: 'Camisas (Adicional)', amount: 143.00, icon: 'fa-shirt' },
+      { id: 'relojes', name: 'Relojes (Adicional)', amount: 120.00, icon: 'fa-clock' }
+    ];
+
+    const DEFAULT_SCHEDULE = [
+      { id: '1', title: 'Cuota Octubre', date: '2026-10-31', amount: 5.00 },
+      { id: '2', title: 'Cuota Noviembre', date: '2026-11-30', amount: 5.00 },
+      { id: '3', title: 'Adicional Camisas', date: '2026-11-15', amount: 13.00 },
+      { id: '4', title: 'Cuota Diciembre', date: '2026-12-31', amount: 5.00 },
+      { id: '5', title: 'Cuota Enero', date: '2027-01-31', amount: 5.00 },
+      { id: '6', title: 'Cuota Febrero', date: '2027-02-28', amount: 5.00 },
+      { id: '7', title: 'Cuota Marzo', date: '2027-03-31', amount: 5.00 },
+      { id: '8', title: 'Cuota Abril', date: '2027-04-30', amount: 5.00 },
+      { id: '9', title: 'Cuota Mayo', date: '2027-05-31', amount: 5.00 },
+      { id: '10', title: 'Cuota Junio', date: '2027-06-30', amount: 5.00 }
+    ];
+
+    // APP STATE
+    let isAdmin = false;
+    let members = DEFAULT_MEMBERS;
+    let payments = [];
+    let expenses = [];
+    let schedule = DEFAULT_SCHEDULE;
+    let currentCalendarDate = new Date(2026, 9, 1);
+    let selectedMemberId = null;
+
+    window.onload = function() {
+      setupRealtimeFirebase();
+    };
+
+    function setupRealtimeFirebase() {
+      // Connect to Cloud Firestore Realtime Listeners
+      if (window.onSnapshot && window.collection && window.db) {
+        // Payments Sync
+        window.onSnapshot(window.collection(window.db, "payments"), (snapshot) => {
+          payments = [];
+          snapshot.forEach(doc => payments.push({ id: doc.id, ...doc.data() }));
+          renderAll();
+          if (selectedMemberId) openMemberModal(selectedMemberId);
+        });
+
+        // Expenses Sync
+        window.onSnapshot(window.collection(window.db, "expenses"), (snapshot) => {
+          expenses = [];
+          snapshot.forEach(doc => expenses.push({ id: doc.id, ...doc.data() }));
+          renderAll();
+        });
+
+        // Calendar Sync
+        window.onSnapshot(window.collection(window.db, "schedule"), (snapshot) => {
+          if (!snapshot.empty) {
+            schedule = [];
+            snapshot.forEach(doc => schedule.push({ id: doc.id, ...doc.data() }));
+          } else {
+            schedule = DEFAULT_SCHEDULE;
+          }
+          renderCalendar();
+        });
+      } else {
+        setTimeout(setupRealtimeFirebase, 300);
+      }
+    }
+
+    function renderAll() {
+      renderSummaryKPIs();
+      renderMembers();
+      renderCommittees();
+      renderCalendar();
+      renderAuditLog();
+      updateAuthUI();
+    }
+
+    function renderSummaryKPIs() {
+      const totalCollected = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+      const totalSpent = expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+      const balance = totalCollected - totalSpent;
+      const progressPct = Math.min(100, Math.round((totalCollected / 495.00) * 100));
+
+      document.getElementById('statRecaudado').innerText = `$${totalCollected.toFixed(2)}`;
+      document.getElementById('statGastado').innerText = `$${totalSpent.toFixed(2)}`;
+      document.getElementById('statDisponible').innerText = `$${balance.toFixed(2)}`;
+      document.getElementById('statProgressBar').style.width = `${progressPct}%`;
+      document.getElementById('statFacturasCount').innerText = `${expenses.length} comprobantes`;
+
+      const avgRate = payments.length > 0 ? (payments.reduce((s, p) => s + (parseFloat(p.rate) || 45), 0) / payments.length) : 45.0;
+      document.getElementById('statRecaudadoBs').innerText = `≈ Bs ${(totalCollected * avgRate).toFixed(2)}`;
+      document.getElementById('binanceRateHeader').innerText = `Ref: ~${avgRate.toFixed(2)} Bs/$`;
+    }
+
+    function renderMembers() {
+      const container = document.getElementById('membersContainer');
+      const query = (document.getElementById('memberSearch').value || '').toLowerCase();
+      container.innerHTML = '';
+
+      const filtered = members.filter(m => m.name.toLowerCase().includes(query) || m.id.includes(query));
+
+      filtered.forEach(m => {
+        const memberPayments = payments.filter(p => p.memberId === m.id);
+        const paidTotal = memberPayments.reduce((s, p) => s + parseFloat(p.amount), 0);
+        const totalDue = 45.00;
+        const remaining = Math.max(0, totalDue - paidTotal);
+
+        let statusBadge = '<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">Pendiente</span>';
+        if (paidTotal >= totalDue) {
+          statusBadge = '<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Solvente (Base)</span>';
+        } else if (paidTotal > 0) {
+          statusBadge = '<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20">Al Día / Abonos</span>';
+        }
+
+        const card = document.createElement('div');
+        card.className = "bg-slate-900/90 border border-slate-700/60 hover:border-brand-500/50 rounded-2xl p-4 transition-all duration-200 cursor-pointer flex flex-col justify-between group";
+        card.onclick = () => openMemberModal(m.id);
+
+        card.innerHTML = `
+          <div>
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="font-bold text-sm text-white group-hover:text-brand-400 transition">${m.name}</h3>
+                <p class="text-xs text-slate-400">C.I: ${m.id}</p>
+              </div>
+              ${statusBadge}
+            </div>
+            <div class="mt-3 text-xs text-slate-400 space-y-1">
+              <div class="flex justify-between">
+                <span>Camisa (${m.shirtSize}):</span>
+                <span class="text-slate-200 font-mono text-[11px]">${m.shirtName}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-xs">
+            <div>
+              <span class="text-slate-400 block text-[10px]">Aportado</span>
+              <span class="font-extrabold text-emerald-400">$${paidTotal.toFixed(2)}</span>
+            </div>
+            <div class="text-right">
+              <span class="text-slate-400 block text-[10px]">Restante Base</span>
+              <span class="font-extrabold text-slate-300">$${remaining.toFixed(2)}</span>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function renderCommittees() {
+      const container = document.getElementById('categoriesGrid');
+      container.innerHTML = '';
+
+      BUDGET_COMMITTEES.forEach(c => {
+        const spentInCat = expenses.filter(e => e.category === c.name).reduce((s, e) => s + parseFloat(e.amount), 0);
+        const pct = Math.min(100, Math.round((spentInCat / c.amount) * 100));
+
+        const card = document.createElement('div');
+        card.className = "bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between";
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold text-slate-200 flex items-center gap-2">
+                <i class="fa-solid ${c.icon} text-brand-400"></i> ${c.name}
+              </span>
+              <span class="text-xs font-bold text-brand-400">$${c.amount.toFixed(2)}</span>
+            </div>
+            <div class="mt-3 flex justify-between text-[11px] text-slate-400">
+              <span>Ejecutado: $${spentInCat.toFixed(2)}</span>
+              <span>${pct}%</span>
+            </div>
+            <div class="mt-1 w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <div class="bg-rose-500 h-1.5 rounded-full" style="width: ${pct}%"></div>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function renderCalendar() {
+      const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+      const year = currentCalendarDate.getFullYear();
+      const month = currentCalendarDate.getMonth();
+
+      document.getElementById('calendarMonthLabel').innerText = `${monthNames[month]} ${year}`;
+
+      const grid = document.getElementById('calendarDaysGrid');
+      grid.innerHTML = '';
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      for (let i = 0; i < firstDay; i++) {
+        grid.appendChild(document.createElement('div'));
+      }
+
+      const activeMonthDeadlines = schedule.filter(s => {
+        const d = new Date(s.date + 'T00:00:00');
+        return d.getFullYear() === year && d.getMonth() === month;
+      });
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = "p-1.5 rounded-xl border border-transparent text-center transition flex flex-col items-center justify-center min-h-[36px]";
+
+        const dayDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const hasEvent = activeMonthDeadlines.find(s => s.date === dayDateStr);
+
+        if (hasEvent) {
+          dayDiv.className += " bg-brand-500/20 border-brand-500/50 text-brand-300 font-extrabold shadow-sm";
+          dayDiv.innerHTML = `<span>${day}</span><span class="w-1.5 h-1.5 rounded-full bg-brand-400 mt-0.5"></span>`;
+          dayDiv.title = `${hasEvent.title} ($${hasEvent.amount})`;
+        } else {
+          dayDiv.className += " text-slate-300 hover:bg-slate-800";
+          dayDiv.innerHTML = `<span>${day}</span>`;
+        }
+        grid.appendChild(dayDiv);
+      }
+
+      const deadlinesList = document.getElementById('monthDeadlinesList');
+      deadlinesList.innerHTML = '';
+      if (activeMonthDeadlines.length === 0) {
+        deadlinesList.innerHTML = `<p class="text-xs text-slate-500 italic">No hay cuotas programadas para este mes.</p>`;
+      } else {
+        activeMonthDeadlines.forEach(item => {
+          deadlinesList.innerHTML += `
+            <div class="bg-slate-900 border border-slate-700/60 rounded-xl p-2.5 flex justify-between items-center text-xs">
+              <div>
+                <p class="font-bold text-white">${item.title}</p>
+                <p class="text-[10px] text-slate-400">${item.date}</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="font-extrabold text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded-md">$${parseFloat(item.amount).toFixed(2)}</span>
+                ${isAdmin ? `
+                  <button onclick="editCalendarEvent('${item.id}')" class="text-slate-400 hover:text-brand-400 p-1"><i class="fa-solid fa-pen text-xs"></i></button>
+                  <button onclick="deleteCalendarEvent('${item.id}')" class="text-slate-400 hover:text-rose-400 p-1"><i class="fa-solid fa-trash text-xs"></i></button>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        });
+      }
+    }
+
+    function changeMonth(delta) {
+      currentCalendarDate.setMonth(currentCalendarDate.getMonth() + delta);
+      renderCalendar();
+    }
+
+    function openAddEventModal() {
+      document.getElementById('eventId').value = '';
+      document.getElementById('eventTitle').value = '';
+      document.getElementById('eventDate').value = '';
+      document.getElementById('eventAmount').value = '5.00';
+      document.getElementById('eventModalTitle').innerText = 'Añadir Evento / Fecha de Pago';
+      document.getElementById('eventModal').classList.remove('hidden');
+    }
+
+    function editCalendarEvent(id) {
+      const item = schedule.find(s => s.id === id);
+      if (!item) return;
+      document.getElementById('eventId').value = item.id;
+      document.getElementById('eventTitle').value = item.title;
+      document.getElementById('eventDate').value = item.date;
+      document.getElementById('eventAmount').value = item.amount;
+      document.getElementById('eventModalTitle').innerText = 'Editar Evento de Calendario';
+      document.getElementById('eventModal').classList.remove('hidden');
+    }
+
+    async function deleteCalendarEvent(id) {
+      if (confirm('¿Deseas eliminar esta fecha/evento del calendario?')) {
+        await window.deleteDoc(window.doc(window.db, "schedule", id));
+      }
+    }
+
+    async function saveCalendarEvent(e) {
+      e.preventDefault();
+      const id = document.getElementById('eventId').value || Date.now().toString();
+      const title = document.getElementById('eventTitle').value;
+      const date = document.getElementById('eventDate').value;
+      const amount = parseFloat(document.getElementById('eventAmount').value);
+
+      await window.setDoc(window.doc(window.db, "schedule", id), { title, date, amount });
+      closeEventModal();
+    }
+
+    function closeEventModal() {
+      document.getElementById('eventModal').classList.add('hidden');
+    }
+
+    // EXPENSES MODAL MANAGEMENT
+    function openExpenseModal() {
+      if (!isAdmin) return;
+      document.getElementById('expenseCategory').value = 'Decoración';
+      document.getElementById('expenseDescription').value = '';
+      document.getElementById('expenseAmount').value = '';
+      document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('expenseImage').value = '';
+      document.getElementById('expenseModal').classList.remove('hidden');
+    }
+
+    function closeExpenseModal() {
+      document.getElementById('expenseModal').classList.add('hidden');
+    }
+
+    async function saveExpense(e) {
+      e.preventDefault();
+      if (!isAdmin) return;
+
+      const category = document.getElementById('expenseCategory').value;
+      const description = document.getElementById('expenseDescription').value;
+      const amount = parseFloat(document.getElementById('expenseAmount').value);
+      const date = document.getElementById('expenseDate').value;
+      const fileInput = document.getElementById('expenseImage');
+
+      if (!amount || amount <= 0) {
+        alert("Por favor ingresa un monto válido.");
+        return;
+      }
+
+      const expenseId = Date.now().toString();
+      const newExpense = {
+        category: category,
+        description: description,
+        amount: amount,
+        date: date,
+        proofImg: null
+      };
+
+      if (fileInput.files && fileInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = async function(evt) {
+          newExpense.proofImg = evt.target.result;
+          await window.setDoc(window.doc(window.db, "expenses", expenseId), newExpense);
+          closeExpenseModal();
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+      } else {
+        await window.setDoc(window.doc(window.db, "expenses", expenseId), newExpense);
+        closeExpenseModal();
+      }
+    }
+
+    function renderAuditLog() {
+      const container = document.getElementById('auditLogList');
+      container.innerHTML = '';
+
+      if (payments.length === 0 && expenses.length === 0) {
+        container.innerHTML = `<p class="text-slate-500 text-center py-6">No hay registros en la nube aún.</p>`;
+        return;
+      }
+
+      const allAudit = [];
+      payments.forEach(p => {
+        const m = members.find(mem => mem.id === p.memberId) || { name: 'Estudiante' };
+        allAudit.push({
+          title: m.name,
+          subtitle: `${p.date || 'Reciente'} • Ref: ${p.ref || 'N/A'}`,
+          amount: `+$${parseFloat(p.amount).toFixed(2)}`,
+          colorClass: 'text-emerald-400',
+          bgClass: 'bg-emerald-500/10',
+          iconClass: 'fa-arrow-down',
+          proofImg: p.proofImg,
+          timestamp: p.date || ''
+        });
+      });
+
+      expenses.forEach(e => {
+        allAudit.push({
+          title: `Gasto: ${e.category}`,
+          subtitle: `${e.date || 'Reciente'} • ${e.description || 'Sin detalle'}`,
+          amount: `-$${parseFloat(e.amount).toFixed(2)}`,
+          colorClass: 'text-rose-400',
+          bgClass: 'bg-rose-500/10',
+          iconClass: 'fa-arrow-up',
+          proofImg: e.proofImg,
+          timestamp: e.date || ''
+        });
+      });
+
+      allAudit.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1));
+
+      allAudit.forEach(itemData => {
+        const item = document.createElement('div');
+        item.className = "bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-2";
+        item.innerHTML = `
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg ${itemData.bgClass} ${itemData.colorClass} flex items-center justify-center font-bold text-xs">
+              <i class="fa-solid ${itemData.iconClass}"></i>
+            </div>
+            <div>
+              <p class="font-bold text-slate-200">${itemData.title}</p>
+              <p class="text-[10px] text-slate-400">${itemData.subtitle}</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="font-extrabold ${itemData.colorClass} text-xs">${itemData.amount}</span>
+            ${itemData.proofImg ? `<button onclick="viewImage('${itemData.proofImg}', 'Comprobante')" class="block text-[10px] text-brand-400 hover:underline">Ver Foto</button>` : ''}
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function openMemberModal(id) {
+      selectedMemberId = id;
+      const m = members.find(mem => mem.id === id);
+      if (!m) return;
+
+      const header = document.getElementById('memberModalHeader');
+      const memberPayments = payments.filter(p => p.memberId === id);
+      const paidTotal = memberPayments.reduce((s, p) => s + parseFloat(p.amount), 0);
+
+      header.innerHTML = `
+        <div class="flex items-center gap-4">
+          <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center font-extrabold text-2xl text-white shadow-md">
+            ${m.name.charAt(0)}
+          </div>
+          <div>
+            <h3 class="text-xl font-extrabold text-white">${m.name}</h3>
+            <p class="text-xs text-slate-400">C.I: ${m.id} • ${m.email}</p>
+            <div class="flex gap-2 mt-2">
+              <span class="bg-slate-900 border border-slate-700 text-[10px] px-2.5 py-0.5 rounded-md text-slate-300 font-mono">Talla: ${m.shirtSize}</span>
+              <span class="bg-slate-900 border border-slate-700 text-[10px] px-2.5 py-0.5 rounded-md text-slate-300 font-mono">Bordado: ${m.shirtName}</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const list = document.getElementById('memberPaymentsList');
+      document.getElementById('memberPaymentStatsBadge').innerText = `Total Aportado: $${paidTotal.toFixed(2)}`;
+      list.innerHTML = '';
+
+      if (memberPayments.length === 0) {
+        list.innerHTML = `<p class="text-xs text-slate-500 italic py-2">No se registran pagos para este alumno aún.</p>`;
+      } else {
+        memberPayments.forEach(p => {
+          list.innerHTML += `
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-2.5 flex justify-between items-center text-xs">
+              <div>
+                <span class="font-bold text-slate-200">${p.concept || 'Cuota'}</span>
+                <p class="text-[10px] text-slate-400">${p.date} • Ref: ${p.ref || 'S/R'}</p>
+              </div>
+              <div class="text-right flex items-center gap-2">
+                <div>
+                  <span class="font-extrabold text-emerald-400 block">$${parseFloat(p.amount).toFixed(2)}</span>
+                  ${p.proofImg ? `<button onclick="viewImage('${p.proofImg}', 'Comprobante de Pago')" class="block text-[10px] text-brand-400 hover:underline">Ver Foto</button>` : ''}
+                </div>
+                ${isAdmin ? `<button onclick="deletePayment('${p.id}')" class="text-slate-400 hover:text-rose-400 p-1.5 ml-1"><i class="fa-solid fa-trash text-xs"></i></button>` : ''}
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      const adminForm = document.getElementById('adminAddPaymentSection');
+      if (isAdmin) {
+        adminForm.classList.remove('hidden');
+      } else {
+        adminForm.classList.add('hidden');
+      }
+
+      document.getElementById('memberModal').classList.remove('hidden');
+    }
+
+    async function deletePayment(paymentId) {
+      if (!isAdmin) return;
+      if (confirm('¿Estás segura de eliminar esta cuota/pago registrado de la base de datos?')) {
+        await window.deleteDoc(window.doc(window.db, "payments", paymentId));
+      }
+    }
+
+    function closeMemberModal() {
+      document.getElementById('memberModal').classList.add('hidden');
+    }
+
+    function openMaterialsModal() {
+      document.getElementById('materialsModal').classList.remove('hidden');
+    }
+    function closeMaterialsModal() {
+      document.getElementById('materialsModal').classList.add('hidden');
+    }
+
+    function sendWhatsAppReport() {
+      const m = members.find(mem => mem.id === selectedMemberId);
+      if (!m) return;
+
+      const type = document.getElementById('waPaymentType').value;
+      const amount = document.getElementById('waAmount').value;
+      const ref = document.getElementById('waRef').value || 'Sin especificar';
+
+      const message = `¡Hola Administrador(a)! 👋🏼%0A%0AReporte de Pago para FondoHub 🎓%0A• *Alumno:* ${m.name}%0A• *Cédula:* ${m.id}%0A• *Concepto:* ${type}%0A• *Monto:* $${amount}%0A• *Referencia / Detalles:* ${ref}%0A%0AAdjunto el comprobante en esta conversación.🏼✨`;
+      
+      window.open(`https://wa.me/584249555199?text=${message}`, '_blank');
+    }
+
+    async function saveAdminPayment() {
+      if (!isAdmin) return;
+
+      const amount = parseFloat(document.getElementById('adminPayAmount').value);
+      const rate = parseFloat(document.getElementById('adminPayRate').value);
+      const concept = document.getElementById('adminPayConcept').value;
+      const ref = document.getElementById('adminPayRef').value;
+      const fileInput = document.getElementById('adminPayImage');
+
+      if (!amount || amount <= 0) {
+        alert("Por favor ingresa un monto válido.");
+        return;
+      }
+
+      const payId = Date.now().toString();
+      const newPayment = {
+        memberId: selectedMemberId,
+        amount: amount,
+        rate: rate,
+        concept: concept,
+        ref: ref,
+        date: new Date().toISOString().split('T')[0],
+        proofImg: null
+      };
+
+      if (fileInput.files && fileInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+          newPayment.proofImg = e.target.result;
+          await window.setDoc(window.doc(window.db, "payments", payId), newPayment);
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+      } else {
+        await window.setDoc(window.doc(window.db, "payments", payId), newPayment);
+      }
+    }
+
+    function toggleAuthModal() {
+      if (isAdmin) {
+        isAdmin = false;
+        renderAll();
+      } else {
+        document.getElementById('authModal').classList.toggle('hidden');
+      }
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const input = document.getElementById('adminPasswordInput').value;
+      if (input === 'Fran11:11') {
+        isAdmin = true;
+        document.getElementById('authModal').classList.add('hidden');
+        document.getElementById('adminPasswordInput').value = '';
+        document.getElementById('loginError').classList.add('hidden');
+        renderAll();
+      } else {
+        document.getElementById('loginError').classList.remove('hidden');
+      }
+    }
+
+    function updateAuthUI() {
+      const modeText = document.getElementById('modeText');
+      const authLabel = document.getElementById('authLabel');
+      const authIcon = document.getElementById('authIcon');
+      const addEventBtn = document.getElementById('addEventBtn');
+      const addExpenseBtn = document.getElementById('addExpenseBtn');
+
+      if (isAdmin) {
+        modeText.innerText = "ADMINISTRADOR ACTIVO";
+        modeText.className = "ml-1 text-emerald-400 font-extrabold";
+        authLabel.innerText = "Cerrar Modo Admin";
+        authIcon.className = "fa-solid fa-unlock text-emerald-400";
+        if (addEventBtn) addEventBtn.classList.remove('hidden');
+        if (addExpenseBtn) addExpenseBtn.classList.remove('hidden');
+      } else {
+        modeText.innerText = "Público / Estudiante";
+        modeText.className = "ml-1 text-white font-bold";
+        authLabel.innerText = "Acceso Administrador";
+        authIcon.className = "fa-solid fa-lock text-brand-400";
+        if (addEventBtn) addEventBtn.classList.add('hidden');
+        if (addExpenseBtn) addExpenseBtn.classList.add('hidden');
+      }
+    }
+
+    function viewImage(src, caption) {
+      document.getElementById('modalImg').src = src;
+      document.getElementById('modalImgCaption').innerText = caption || 'Comprobante';
+      document.getElementById('imageModal').classList.remove('hidden');
+    }
+    function closeImageModal() {
+      document.getElementById('imageModal').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
